@@ -56,6 +56,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IMessageSinkWithEvents.cs" />
+    <Compile Include="MessageSinkWithEvents.cs" />
     <Compile Include="Remoting\TestCaseDeserializerArgs.cs" />
     <Compile Include="Isolated.cs" />
     <Compile Include="IsolatedTestFramework.cs" />
@@ -69,6 +71,8 @@
     <Compile Include="Runners\TestCollectionRunner.cs" />
     <Compile Include="Runners\TestFrameworkExecutor.cs" />
     <Compile Include="Remoting\SerializableRunSummary.cs" />
+    <Compile Include="Scopes\IsolationScope.cs" />
+    <Compile Include="Scopes\TestCollectionScope.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

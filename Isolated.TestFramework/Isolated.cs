@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using AppDomainToolkit;
 using Isolated.TestFramework.Remoting;
+using Isolated.TestFramework.Scopes;
 using Xunit.Sdk;
 using IDisposable = System.IDisposable;
 
@@ -12,10 +13,12 @@ namespace Isolated.TestFramework
 {
     internal class Isolated : MarshalByRefObject, IDisposable
     {
+        private readonly IsolationScope _scope;
         private readonly AppDomainContext<AssemblyTargetLoader, PathBasedAssemblyResolver> _appDomainContext;
 
-        public Isolated()
+        public Isolated(IsolationScope scope)
         {
+            _scope = scope;
             _appDomainContext = AppDomainContext.Create(AppDomain.CurrentDomain.SetupInformation);
             CallerAppDomainId = AppDomain.CurrentDomain.Id;
         }
@@ -66,6 +69,7 @@ namespace Isolated.TestFramework
 
         public void Dispose()
         {
+            _scope.Dispose();
             _appDomainContext.Dispose();
         }
     }

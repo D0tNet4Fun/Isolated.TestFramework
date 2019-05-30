@@ -22,5 +22,14 @@ namespace Isolated.TestFramework.Tests
             _testOutputHelper.WriteLine(message);
             Console.WriteLine(message);  // shows in the test runner console
         }
+
+        [Fact]
+        public void Throw()
+        {
+            var message = $"Hello from app domain {AppDomain.CurrentDomain.Id}!";
+            _testOutputHelper.WriteLine(message);
+            Console.WriteLine(message);  // shows in the test runner console
+            throw new Exception("This is expected to fail");
+        }
     }
 }

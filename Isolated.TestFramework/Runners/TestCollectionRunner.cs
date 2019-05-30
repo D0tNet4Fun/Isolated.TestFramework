@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Isolated.TestFramework.Remoting;
+using Isolated.TestFramework.Scopes;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
@@ -10,11 +11,13 @@ namespace Isolated.TestFramework.Runners
 {
     internal class TestCollectionRunner : XunitTestCollectionRunner
     {
+        private readonly IMessageSinkWithEvents _meeMessageSinkWithEvents;
         private readonly TestCaseDeserializerArgs _testCaseDeserializerArgs;
 
-        public TestCollectionRunner(ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageBus messageBus, ITestCaseOrderer testCaseOrderer, ExceptionAggregator aggregator, CancellationTokenSource cancellationTokenSource, TestCaseDeserializerArgs testCaseDeserializerArgs)
+        public TestCollectionRunner(ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageBus messageBus, ITestCaseOrderer testCaseOrderer, ExceptionAggregator aggregator, CancellationTokenSource cancellationTokenSource, IMessageSinkWithEvents meeMessageSinkWithEvents, TestCaseDeserializerArgs testCaseDeserializerArgs)
             : base(testCollection, testCases, diagnosticMessageSink, messageBus, testCaseOrderer, aggregator, cancellationTokenSource)
         {
+            _meeMessageSinkWithEvents = meeMessageSinkWithEvents;
             _testCaseDeserializerArgs = testCaseDeserializerArgs;
         }
 
@@ -26,7 +29,7 @@ namespace Isolated.TestFramework.Runners
 
             try
             {
-                using (var isolated = new Isolated())
+                using (var isolated = new Isolated(new TestCollectionScope(TestCollection, _meeMessageSinkWithEvents)))
                 {
                     var remoteTestCases = isolated.CreateRemoteTestCases(TestCases,_testCaseDeserializerArgs);
                     var runnerArgs = new object[] { TestCollection, remoteTestCases, DiagnosticMessageSink, MessageBus };
