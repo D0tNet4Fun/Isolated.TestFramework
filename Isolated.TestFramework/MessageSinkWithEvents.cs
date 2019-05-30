@@ -1,21 +1,32 @@
 ﻿using System;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace Isolated.TestFramework
 {
     public class MessageSinkWithEvents : IMessageSinkWithEvents
     {
         private readonly IMessageSink _innerMessageSink;
+        private readonly IMessageSink _diagnosticMessageSink;
 
-        public MessageSinkWithEvents(IMessageSink innerMessageSink)
+        public MessageSinkWithEvents(IMessageSink innerMessageSink, IMessageSink diagnosticMessageSink)
         {
             _innerMessageSink = innerMessageSink;
+            _diagnosticMessageSink = diagnosticMessageSink;
         }
 
         public bool OnMessage(IMessageSinkMessage message)
         {
             var result = _innerMessageSink.OnMessage(message);
-            OnMessageHandled((dynamic)message);
+            try
+            {
+                OnMessageHandled((dynamic) message);
+            }
+            catch (Exception e)
+            {
+                _diagnosticMessageSink?.OnMessage(new DiagnosticMessage($"Failed to handle message {message.GetType().Name}: {e}"));
+            }
+
             return result;
         }
 

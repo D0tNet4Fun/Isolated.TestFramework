@@ -16,7 +16,7 @@ namespace Isolated.TestFramework.Runners
             : base(testAssembly, testCases, diagnosticMessageSink, executionMessageSink, executionOptions)
         {
             _testCaseDeserializerArgs = testCaseDeserializerArgs;
-            _messageSyncWithEvents = new MessageSinkWithEvents(executionMessageSink);
+            _messageSyncWithEvents = new MessageSinkWithEvents(executionMessageSink, diagnosticMessageSink);
             ExecutionMessageSink = _messageSyncWithEvents; // the ExecutionMessageSink is used to create the base message bus
         }
 
