@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Isolated.TestFramework.Behaviors;
+using Isolated.TestFramework.Events;
 using Isolated.TestFramework.Remoting;
 using Xunit.Abstractions;
 using Xunit.Sdk;
@@ -17,6 +18,7 @@ namespace Isolated.TestFramework.Runners
         private readonly IMessageSinkWithEvents _messageSyncWithEvents;
         private Exception _configurationException;
         private IIsolationBehavior _isolationBehavior;
+        private AppDomainEventListener _appDomainEventListener;
 
         public TestAssemblyRunner(ITestAssembly testAssembly, IEnumerable<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageSink executionMessageSink, ITestFrameworkExecutionOptions executionOptions, TestCaseDeserializerArgs testCaseDeserializerArgs)
             : base(testAssembly, testCases, diagnosticMessageSink, executionMessageSink, executionOptions)
@@ -34,32 +36,10 @@ namespace Isolated.TestFramework.Runners
 
         protected override async Task AfterTestAssemblyStartingAsync()
         {
-            ConfigureIsolationBehavior();
-            await base.AfterTestAssemblyStartingAsync();
-        }
-
-        private void ConfigureIsolationBehavior()
-        {
             try
             {
-                var isolationBehaviorAttributeInfo = TestAssembly.Assembly.GetCustomAttributes(typeof(IsolationBehaviorAttribute).AssemblyQualifiedName).SingleOrDefault();
-                if (isolationBehaviorAttributeInfo == null) return;
-
-                var args = isolationBehaviorAttributeInfo.GetConstructorArguments().ToArray();
-                var isolationLevel = (IsolationLevel)args[0];
-                switch (isolationLevel)
-                {
-                    case IsolationLevel.Default: return;
-                    case IsolationLevel.Custom:
-                        _isolationBehavior = (IIsolationBehavior)Activator.CreateInstance((Type)args[1]);
-                        break;
-                    case IsolationLevel.Collections:
-                        _isolationBehavior = new IsolateTestCollectionBehavior();
-                        break;
-                    default:
-                        DiagnosticMessageSink.OnMessage(new DiagnosticMessage($"Unknown isolation level: {isolationLevel}"));
-                        break;
-                }
+                ConfigureIsolationBehavior();
+                ConfigureAppDomainEventListener();
             }
             catch (TargetInvocationException e)
             {
@@ -69,6 +49,40 @@ namespace Isolated.TestFramework.Runners
             {
                 _configurationException = e;
             }
+
+            await base.AfterTestAssemblyStartingAsync();
+        }
+
+        private void ConfigureIsolationBehavior()
+        {
+            var attributeInfo = TestAssembly.Assembly.GetCustomAttributes(typeof(IsolationBehaviorAttribute)).SingleOrDefault();
+            if (attributeInfo == null) return;
+
+            var args = attributeInfo.GetConstructorArguments().ToArray();
+            var isolationLevel = (IsolationLevel)args[0];
+            switch (isolationLevel)
+            {
+                case IsolationLevel.Default: return;
+                case IsolationLevel.Custom:
+                    var type = (Type)args[1];
+                    _isolationBehavior = (IIsolationBehavior)Activator.CreateInstance(type);
+                    break;
+                case IsolationLevel.Collections:
+                    _isolationBehavior = new IsolateTestCollectionBehavior();
+                    break;
+                default:
+                    DiagnosticMessageSink.OnMessage(new DiagnosticMessage($"Unknown isolation level: {isolationLevel}"));
+                    break;
+            }
+        }
+
+        private void ConfigureAppDomainEventListener()
+        {
+            var attributeInfo = TestAssembly.Assembly.GetCustomAttributes(typeof(AppDomainEventListenerAttribute)).SingleOrDefault();
+            if (attributeInfo == null) return;
+
+            var type = (Type)attributeInfo.GetConstructorArguments().Single();
+            _appDomainEventListener = (AppDomainEventListener)Activator.CreateInstance(type);
         }
 
         protected override async Task<RunSummary> RunTestCollectionAsync(IMessageBus messageBus, ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, CancellationTokenSource cancellationTokenSource)
@@ -80,7 +94,7 @@ namespace Isolated.TestFramework.Runners
                 return new RunSummary();
             }
 
-            return await new TestCollectionRunner(testCollection, testCases.ToList(), DiagnosticMessageSink, messageBus, TestCaseOrderer, new ExceptionAggregator(Aggregator), cancellationTokenSource, _messageSyncWithEvents, _testCaseDeserializerArgs, _isolationBehavior).RunAsync();
+            return await new TestCollectionRunner(testCollection, testCases.ToList(), DiagnosticMessageSink, messageBus, TestCaseOrderer, new ExceptionAggregator(Aggregator), cancellationTokenSource, _messageSyncWithEvents, _testCaseDeserializerArgs, _isolationBehavior, _appDomainEventListener).RunAsync();
         }
     }
 }

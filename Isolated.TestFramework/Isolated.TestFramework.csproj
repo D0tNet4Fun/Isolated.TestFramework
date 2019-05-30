@@ -56,9 +56,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AppDomainEventListenerAttribute.cs" />
     <Compile Include="Behaviors\IsolateByCustomAttributeBehavior.cs" />
     <Compile Include="Behaviors\IsolateTestCollectionBehavior.cs" />
     <Compile Include="Behaviors\IIsolationBehavior.cs" />
+    <Compile Include="Events\AppDomainEventListener.cs" />
     <Compile Include="IMessageSinkWithEvents.cs" />
     <Compile Include="IsolationBehaviorAttribute.cs" />
     <Compile Include="IsolationLevel.cs" />

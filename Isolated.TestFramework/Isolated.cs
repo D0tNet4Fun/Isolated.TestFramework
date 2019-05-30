@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using AppDomainToolkit;
+using Isolated.TestFramework.Events;
 using Isolated.TestFramework.Remoting;
 using Isolated.TestFramework.Scopes;
 using Xunit.Sdk;
@@ -14,12 +15,17 @@ namespace Isolated.TestFramework
     internal class Isolated : MarshalByRefObject, IDisposable
     {
         private readonly IsolationScope _scope;
+        private readonly AppDomainEventListener _appDomainEventListener;
         private readonly AppDomainContext<AssemblyTargetLoader, PathBasedAssemblyResolver> _appDomainContext;
 
-        public Isolated(IsolationScope scope)
+        public Isolated(IsolationScope scope, AppDomainEventListener appDomainEventListener)
         {
             _scope = scope;
+            _appDomainEventListener = appDomainEventListener;
+
+            OnAppDomainLoading();
             _appDomainContext = AppDomainContext.Create(AppDomain.CurrentDomain.SetupInformation);
+            OnAppDomainLoaded();
             CallerAppDomainId = AppDomain.CurrentDomain.Id;
         }
 
@@ -69,8 +75,50 @@ namespace Isolated.TestFramework
 
         public void Dispose()
         {
+            OnAppDomainUnloading();
             _scope.Dispose();
             _appDomainContext.Dispose();
+            OnAppDomainUnloaded();
+        }
+
+        private void OnAppDomainLoading()
+        {
+            _appDomainEventListener?.OnAppDomainLoading();
+        }
+
+        private void OnAppDomainLoaded()
+        {
+            if (_appDomainEventListener != null)
+            {
+                var appDomainEventListenerType = _appDomainEventListener.GetType();
+                RemoteAction.Invoke(_appDomainContext.Domain,
+                    appDomainEventListenerType,
+                    type =>
+                    {
+                        var appDomainEventListener = (AppDomainEventListener)Activator.CreateInstance(type);
+                        appDomainEventListener.OnAppDomainLoadedRemotely();
+                    });
+            }
+        }
+
+        private void OnAppDomainUnloading()
+        {
+            if (_appDomainEventListener != null)
+            {
+                var appDomainEventListenerType = _appDomainEventListener.GetType();
+                RemoteAction.Invoke(_appDomainContext.Domain,
+                    appDomainEventListenerType,
+                    type =>
+                    {
+                        var appDomainEventListener = (AppDomainEventListener)Activator.CreateInstance(type);
+                        appDomainEventListener.OnAppDomainUnloadingRemotely();
+                    });
+            }
+        }
+
+        private void OnAppDomainUnloaded()
+        {
+            _appDomainEventListener?.OnAppDomainUnloaded();
         }
     }
 }
