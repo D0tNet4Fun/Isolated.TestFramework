@@ -65,6 +65,7 @@
     <Compile Include="IsolationBehaviorAttribute.cs" />
     <Compile Include="IsolationLevel.cs" />
     <Compile Include="MessageSinkWithEvents.cs" />
+    <Compile Include="ObjectFactory.cs" />
     <Compile Include="Remoting\TestCaseDeserializerArgs.cs" />
     <Compile Include="Isolated.cs" />
     <Compile Include="IsolatedTestFramework.cs" />

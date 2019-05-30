@@ -65,7 +65,7 @@ namespace Isolated.TestFramework.Runners
                 case IsolationLevel.Default: return;
                 case IsolationLevel.Custom:
                     var type = (Type)args[1];
-                    _isolationBehavior = (IIsolationBehavior)Activator.CreateInstance(type);
+                    _isolationBehavior = (IIsolationBehavior)ObjectFactory.CreateInstance(type, null);
                     break;
                 case IsolationLevel.Collections:
                     _isolationBehavior = new IsolateTestCollectionBehavior();
@@ -82,7 +82,7 @@ namespace Isolated.TestFramework.Runners
             if (attributeInfo == null) return;
 
             var type = (Type)attributeInfo.GetConstructorArguments().Single();
-            _appDomainEventListener = (AppDomainEventListener)Activator.CreateInstance(type);
+            _appDomainEventListener = (AppDomainEventListener)ObjectFactory.CreateInstance(type, null);
         }
 
         protected override async Task<RunSummary> RunTestCollectionAsync(IMessageBus messageBus, ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, CancellationTokenSource cancellationTokenSource)

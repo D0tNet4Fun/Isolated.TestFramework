@@ -56,7 +56,7 @@ namespace Isolated.TestFramework
                         if (callerAppDomainId == AppDomain.CurrentDomain.Id)
                             throw new InvalidOperationException("The action is running in the default app domain instead of being run in the foreign app domain.");
 
-                        var runner = (TRunner)Activator.CreateInstance(typeof(TRunner), args);
+                        var runner = ObjectFactory.CreateInstance<TRunner>(args);
                         var runSummary = await (Task<RunSummary>)runAsyncMethod.Invoke(runner, null);
                         taskCompletionSource.SetResult(new SerializableRunSummary(runSummary));
                     }
@@ -95,7 +95,7 @@ namespace Isolated.TestFramework
                     appDomainEventListenerType,
                     type =>
                     {
-                        var appDomainEventListener = (AppDomainEventListener)Activator.CreateInstance(type);
+                        var appDomainEventListener = (AppDomainEventListener)ObjectFactory.CreateInstance(type, null);
                         appDomainEventListener.OnAppDomainLoadedRemotely();
                     });
             }
@@ -110,7 +110,7 @@ namespace Isolated.TestFramework
                     appDomainEventListenerType,
                     type =>
                     {
-                        var appDomainEventListener = (AppDomainEventListener)Activator.CreateInstance(type);
+                        var appDomainEventListener = (AppDomainEventListener)ObjectFactory.CreateInstance(type, null);
                         appDomainEventListener.OnAppDomainUnloadingRemotely();
                     });
             }

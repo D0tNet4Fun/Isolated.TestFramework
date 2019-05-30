@@ -38,7 +38,7 @@ namespace Isolated.TestFramework.Runners
                 using (var isolated = new Isolated(new TestCollectionScope(TestCollection, _meeMessageSinkWithEvents), _appDomainEventListener))
                 {
                     var remoteTestCases = isolated.CreateRemoteTestCases(TestCases,_testCaseDeserializerArgs);
-                    var runnerArgs = new object[] { TestCollection, remoteTestCases, DiagnosticMessageSink, MessageBus };
+                    var runnerArgs = new object[] { TestCollection, remoteTestCases, DiagnosticMessageSink, MessageBus, TestCaseOrderer.GetType() };
                     return await isolated.CreateInstanceAndRunAsync<RemoteTestCollectionRunner>(runnerArgs, x => x.RunAsync());
                 }
             }
@@ -52,10 +52,10 @@ namespace Isolated.TestFramework.Runners
         // ReSharper disable once ClassNeverInstantiated.Local
         private class RemoteTestCollectionRunner : XunitTestCollectionRunner
         {
-            public RemoteTestCollectionRunner(ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageBus messageBus)
+            public RemoteTestCollectionRunner(ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageBus messageBus, Type testCaseOrdererType)
                 : base(testCollection, testCases, diagnosticMessageSink, messageBus, null, null, null)
             {
-                TestCaseOrderer = new DefaultTestCaseOrderer(diagnosticMessageSink);
+                TestCaseOrderer = ObjectFactory.CreateTestCaseOrderer(testCaseOrdererType, diagnosticMessageSink);
                 Aggregator = new ExceptionAggregator();
                 CancellationTokenSource = new CancellationTokenSource();
             }
