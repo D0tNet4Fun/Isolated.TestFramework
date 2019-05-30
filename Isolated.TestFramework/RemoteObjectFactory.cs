@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using AppDomainToolkit;
 using Isolated.TestFramework.Remoting;
 using Isolated.TestFramework.Runners;
@@ -42,6 +43,11 @@ namespace Isolated.TestFramework
                     var remoteDeserializer = deserializer.Value;
                     return remoteDeserializer.Deserialize(data);
                 });
+        }
+
+        public RemoteCancellationTokenSource CreateRemoteCancellationTokenSource(CancellationTokenSource cancellationTokenSource)
+        {
+            return RemoteFunc.Invoke(_appDomain, () => new RemoteCancellationTokenSource());
         }
     }
 }

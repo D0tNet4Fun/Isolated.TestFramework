@@ -14,6 +14,11 @@ namespace Isolated.TestFramework.Scopes
 
         protected void SetFinalEvent() => _finalEventRaised.Set();
 
+        public void Abort()
+        {
+            _finalEventRaised.Set();
+        }
+
         protected virtual void Dispose(bool disposing)
         {
             if (disposing) _finalEventRaised.Dispose();

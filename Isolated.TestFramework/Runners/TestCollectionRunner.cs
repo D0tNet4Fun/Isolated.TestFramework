@@ -38,7 +38,8 @@ namespace Isolated.TestFramework.Runners
                 using (var isolated = new Isolated(new TestCollectionScope(TestCollection, _meeMessageSinkWithEvents), _appDomainEventListener))
                 {
                     var remoteTestCases = isolated.CreateRemoteTestCases(TestCases,_testCaseDeserializerArgs);
-                    var runnerArgs = new object[] { TestCollection, remoteTestCases, DiagnosticMessageSink, MessageBus, TestCaseOrderer.GetType() };
+                    var remoteCancellationTokenSource = isolated.CreateRemoteCancellationTokenSource(CancellationTokenSource);
+                    var runnerArgs = new object[] { TestCollection, remoteTestCases, DiagnosticMessageSink, MessageBus, TestCaseOrderer.GetType(), remoteCancellationTokenSource };
                     return await isolated.CreateInstanceAndRunAsync<RemoteTestCollectionRunner>(runnerArgs, x => x.RunAsync());
                 }
             }
@@ -52,12 +53,21 @@ namespace Isolated.TestFramework.Runners
         // ReSharper disable once ClassNeverInstantiated.Local
         private class RemoteTestCollectionRunner : XunitTestCollectionRunner
         {
-            public RemoteTestCollectionRunner(ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageBus messageBus, Type testCaseOrdererType)
+            private readonly RemoteCancellationTokenSource _remoteCancellationTokenSource;
+
+            public RemoteTestCollectionRunner(ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageBus messageBus, Type testCaseOrdererType, RemoteCancellationTokenSource remoteCancellationTokenSource)
                 : base(testCollection, testCases, diagnosticMessageSink, messageBus, null, null, null)
             {
+                _remoteCancellationTokenSource = remoteCancellationTokenSource;
                 TestCaseOrderer = ObjectFactory.CreateTestCaseOrderer(testCaseOrdererType, diagnosticMessageSink);
                 Aggregator = new ExceptionAggregator();
-                CancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource = remoteCancellationTokenSource.CancellationTokenSource;
+            }
+
+            protected override async Task BeforeTestCollectionFinishedAsync()
+            {
+                await base.BeforeTestCollectionFinishedAsync();
+                _remoteCancellationTokenSource.Dispose();
             }
         }
     }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 using AppDomainToolkit;
 using Isolated.TestFramework.Events;
@@ -17,6 +18,7 @@ namespace Isolated.TestFramework
         private readonly IsolationScope _scope;
         private readonly AppDomainEventListener _appDomainEventListener;
         private readonly AppDomainContext<AssemblyTargetLoader, PathBasedAssemblyResolver> _appDomainContext;
+        private CancellationTokenRegistration _cancellationRegistration;
 
         public Isolated(IsolationScope scope, AppDomainEventListener appDomainEventListener)
         {
@@ -38,37 +40,53 @@ namespace Isolated.TestFramework
             return remoteTestCases;
         }
 
+        public RemoteCancellationTokenSource CreateRemoteCancellationTokenSource(CancellationTokenSource cancellationTokenSource)
+        {
+            var remoteObjectFactory = new RemoteObjectFactory(_appDomainContext.Domain, null);
+            var remoteCancellationTokenSource = remoteObjectFactory.CreateRemoteCancellationTokenSource(cancellationTokenSource);
+            _cancellationRegistration = cancellationTokenSource.Token.Register(remoteCancellationTokenSource.Cancel);
+            return remoteCancellationTokenSource;
+        }
+
         public async Task<RunSummary> CreateInstanceAndRunAsync<TRunner>(object[] runnerArgs, Expression<Func<TRunner, Task<RunSummary>>> runAsyncExpression)
         {
             var methodInfo = ((MethodCallExpression)runAsyncExpression.Body).Method;
 
             var remoteTaskCompletionSource = new RemoteTaskCompletionSource<SerializableRunSummary>();
-            RemoteAction.Invoke(
-                _appDomainContext.Domain,
-                CallerAppDomainId,
-                runnerArgs,
-                remoteTaskCompletionSource,
-                methodInfo,
-                async (callerAppDomainId, args, taskCompletionSource, runAsyncMethod) =>
-                {
-                    try
+            try
+            {
+                RemoteAction.Invoke(
+                    _appDomainContext.Domain,
+                    CallerAppDomainId,
+                    runnerArgs,
+                    remoteTaskCompletionSource,
+                    methodInfo,
+                    async (callerAppDomainId, args, taskCompletionSource, runAsyncMethod) =>
                     {
-                        if (callerAppDomainId == AppDomain.CurrentDomain.Id)
-                            throw new InvalidOperationException("The action is running in the default app domain instead of being run in the foreign app domain.");
+                        try
+                        {
+                            if (callerAppDomainId == AppDomain.CurrentDomain.Id)
+                                throw new InvalidOperationException("The action is running in the default app domain instead of being run in the foreign app domain.");
 
-                        var runner = ObjectFactory.CreateInstance<TRunner>(args);
-                        var runSummary = await (Task<RunSummary>)runAsyncMethod.Invoke(runner, null);
-                        taskCompletionSource.SetResult(new SerializableRunSummary(runSummary));
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        taskCompletionSource.SetCanceled();
-                    }
-                    catch (Exception e)
-                    {
-                        taskCompletionSource.SetException(e);
-                    }
-                });
+                            var runner = ObjectFactory.CreateInstance<TRunner>(args);
+                            var runSummary = await (Task<RunSummary>) runAsyncMethod.Invoke(runner, null);
+                            taskCompletionSource.SetResult(new SerializableRunSummary(runSummary));
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            taskCompletionSource.SetCanceled();
+                        }
+                        catch (Exception e)
+                        {
+                            taskCompletionSource.SetException(e);
+                        }
+                    });
+            }
+            catch (Exception)
+            {
+                _scope.Abort();
+                throw;
+            }
             var serializableRunSummary = await remoteTaskCompletionSource.Task;
             return serializableRunSummary.AsRunSummary();
         }
@@ -76,6 +94,7 @@ namespace Isolated.TestFramework
         public void Dispose()
         {
             OnAppDomainUnloading();
+            _cancellationRegistration.Dispose();
             _scope.Dispose();
             _appDomainContext.Dispose();
             OnAppDomainUnloaded();
