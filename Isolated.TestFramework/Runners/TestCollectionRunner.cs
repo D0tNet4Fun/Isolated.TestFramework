@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Isolated.TestFramework.Behaviors;
 using Isolated.TestFramework.Remoting;
 using Isolated.TestFramework.Scopes;
 using Xunit.Abstractions;
@@ -14,14 +15,16 @@ namespace Isolated.TestFramework.Runners
         private readonly IMessageSinkWithEvents _meeMessageSinkWithEvents;
         private readonly TestCaseDeserializerArgs _testCaseDeserializerArgs;
 
-        public TestCollectionRunner(ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageBus messageBus, ITestCaseOrderer testCaseOrderer, ExceptionAggregator aggregator, CancellationTokenSource cancellationTokenSource, IMessageSinkWithEvents meeMessageSinkWithEvents, TestCaseDeserializerArgs testCaseDeserializerArgs)
+        public TestCollectionRunner(ITestCollection testCollection, IReadOnlyList<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageBus messageBus, ITestCaseOrderer testCaseOrderer, ExceptionAggregator aggregator, CancellationTokenSource cancellationTokenSource, IMessageSinkWithEvents meeMessageSinkWithEvents, TestCaseDeserializerArgs testCaseDeserializerArgs, IIsolationBehavior isolationBehavior)
             : base(testCollection, testCases, diagnosticMessageSink, messageBus, testCaseOrderer, aggregator, cancellationTokenSource)
         {
             _meeMessageSinkWithEvents = meeMessageSinkWithEvents;
             _testCaseDeserializerArgs = testCaseDeserializerArgs;
+
+            RunIsolated = isolationBehavior?.IsolateTestCollection(testCollection, testCases) ?? false;
         }
 
-        public bool RunIsolated { get; set; } = true;
+        public bool RunIsolated { get; }
 
         public new async Task<RunSummary> RunAsync()
         {

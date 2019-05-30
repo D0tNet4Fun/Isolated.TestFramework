@@ -56,7 +56,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Behaviors\IsolateByCustomAttributeBehavior.cs" />
+    <Compile Include="Behaviors\IsolateTestCollectionBehavior.cs" />
+    <Compile Include="Behaviors\IIsolationBehavior.cs" />
     <Compile Include="IMessageSinkWithEvents.cs" />
+    <Compile Include="IsolationBehaviorAttribute.cs" />
+    <Compile Include="IsolationLevel.cs" />
     <Compile Include="MessageSinkWithEvents.cs" />
     <Compile Include="Remoting\TestCaseDeserializerArgs.cs" />
     <Compile Include="Isolated.cs" />
