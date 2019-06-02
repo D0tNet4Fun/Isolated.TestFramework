@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Isolated.TestFramework.Behaviors;
@@ -29,30 +30,46 @@ namespace Isolated.TestFramework.Runners
 
         public bool RunIsolated { get; }
 
+        public new IReadOnlyList<IXunitTestCase> TestCases => (IReadOnlyList<IXunitTestCase>)base.TestCases;
+
         public new async Task<RunSummary> RunAsync()
         {
             if (!RunIsolated) return await base.RunAsync();
 
             try
             {
-                using (var scope = new TestCollectionScope(TestCollection, _meeMessageSinkWithEvents))
-                using (var isolated = new Isolated(_appDomainEventListener))
-                {
-                    var remoteTestCases = isolated.CreateRemoteTestCases(TestCases, _testCaseDeserializerArgs);
-                    var remoteCancellationTokenSource = isolated.CreateRemoteCancellationTokenSource(CancellationTokenSource);
-                    var runnerArgs = new object[] {TestCollection, remoteTestCases, DiagnosticMessageSink, MessageBus, TestCaseOrderer.GetType(), remoteCancellationTokenSource};
-                    var runSummary = await isolated.CreateInstanceAndRunAsync<RemoteTestCollectionRunner>(runnerArgs, x => x.RunAsync());
-
-                    // wait for the scope before disposing the isolated instance, but only if we made it this far
-                    await scope.WaitAsync(CancellationTokenSource.Token);
-                    return runSummary;
-                }
+                return await RunIsolatedAsync();
             }
             catch (Exception e)
             {
-                DiagnosticMessageSink.OnMessage(new DiagnosticMessage($"Error running test collection in isolation: {e}"));
-                throw;
+                return FailAllTestsInCollection(e);
             }
+        }
+
+        private async Task<RunSummary> RunIsolatedAsync()
+        {
+            using (var scope = new TestCollectionScope(TestCollection, _meeMessageSinkWithEvents))
+            using (var isolated = new Isolated(_appDomainEventListener))
+            {
+                var remoteTestCases = isolated.CreateRemoteTestCases(TestCases, _testCaseDeserializerArgs);
+                var remoteCancellationTokenSource = isolated.CreateRemoteCancellationTokenSource(CancellationTokenSource);
+                var runnerArgs = new object[] {TestCollection, remoteTestCases, DiagnosticMessageSink, MessageBus, TestCaseOrderer.GetType(), remoteCancellationTokenSource};
+                var runSummary = await isolated.CreateInstanceAndRunAsync<RemoteTestCollectionRunner>(runnerArgs, x => x.RunAsync());
+
+                // wait for the scope before disposing the isolated instance, but only if we made it this far
+                await scope.WaitAsync(CancellationTokenSource.Token);
+                return runSummary;
+            }
+        }
+
+        private RunSummary FailAllTestsInCollection(Exception e)
+        {
+            MessageBus.QueueMessage(new ErrorMessage(TestCases, e));
+            return new RunSummary
+            {
+                Total = TestCases.Count,
+                Failed = TestCases.Count
+            };
         }
 
         // ReSharper disable once ClassNeverInstantiated.Local
