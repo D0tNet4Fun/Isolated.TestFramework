@@ -1,8 +1,9 @@
-﻿using Xunit.Abstractions;
+﻿using System;
+using Xunit.Abstractions;
 
 namespace Isolated.TestFramework.Scopes
 {
-    internal class TestCollectionScope : IsolationScope
+    internal class TestCollectionScope : IsolationScope, IDisposable
     {
         private readonly ITestCollection _testCollection;
         private readonly IMessageSinkWithEvents _messageSinkWithEvents;
@@ -19,10 +20,9 @@ namespace Isolated.TestFramework.Scopes
             if (_testCollection == e) SetFinalEvent();
         }
 
-        protected override void Dispose(bool disposing)
+        public void Dispose()
         {
-            if (disposing) _messageSinkWithEvents.TestCollectionFinished -= MessageSinkWithEventsOnTestCollectionFinished;
-            base.Dispose(disposing);
+            _messageSinkWithEvents.TestCollectionFinished -= MessageSinkWithEventsOnTestCollectionFinished;
         }
     }
 }

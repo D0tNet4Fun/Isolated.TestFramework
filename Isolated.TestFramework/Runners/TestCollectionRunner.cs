@@ -35,12 +35,17 @@ namespace Isolated.TestFramework.Runners
 
             try
             {
-                using (var isolated = new Isolated(new TestCollectionScope(TestCollection, _meeMessageSinkWithEvents), _appDomainEventListener))
+                using (var scope = new TestCollectionScope(TestCollection, _meeMessageSinkWithEvents))
+                using (var isolated = new Isolated(_appDomainEventListener))
                 {
-                    var remoteTestCases = isolated.CreateRemoteTestCases(TestCases,_testCaseDeserializerArgs);
+                    var remoteTestCases = isolated.CreateRemoteTestCases(TestCases, _testCaseDeserializerArgs);
                     var remoteCancellationTokenSource = isolated.CreateRemoteCancellationTokenSource(CancellationTokenSource);
-                    var runnerArgs = new object[] { TestCollection, remoteTestCases, DiagnosticMessageSink, MessageBus, TestCaseOrderer.GetType(), remoteCancellationTokenSource };
-                    return await isolated.CreateInstanceAndRunAsync<RemoteTestCollectionRunner>(runnerArgs, x => x.RunAsync());
+                    var runnerArgs = new object[] {TestCollection, remoteTestCases, DiagnosticMessageSink, MessageBus, TestCaseOrderer.GetType(), remoteCancellationTokenSource};
+                    var runSummary = await isolated.CreateInstanceAndRunAsync<RemoteTestCollectionRunner>(runnerArgs, x => x.RunAsync());
+
+                    // wait for the scope before disposing the isolated instance, but only if we made it this far
+                    await scope.WaitAsync(CancellationTokenSource.Token);
+                    return runSummary;
                 }
             }
             catch (Exception e)

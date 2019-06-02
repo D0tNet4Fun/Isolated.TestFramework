@@ -1,36 +1,23 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 namespace Isolated.TestFramework.Scopes
 {
-    internal class IsolationScope : IDisposable
+    internal class IsolationScope
     {
-        private readonly ManualResetEventSlim _finalEventRaised = new ManualResetEventSlim(false);
+        private readonly TaskCompletionSource<object> _finalEventRaised = new TaskCompletionSource<object>();
 
         protected IsolationScope()
         {
-
         }
 
-        protected void SetFinalEvent() => _finalEventRaised.Set();
+        protected void SetFinalEvent() => _finalEventRaised.SetResult(null);
 
-        public void Abort()
+        public Task WaitAsync(CancellationToken cancellationToken)
         {
-            _finalEventRaised.Set();
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing) _finalEventRaised.Dispose();
-        }
-
-        public void Dispose()
-        {
-            // wait until the final event is received before disposing the scope
-            _finalEventRaised.Wait();
-
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            var registration = cancellationToken.Register(() => _finalEventRaised.SetCanceled());
+            _finalEventRaised.Task.ContinueWith(t => registration.Dispose(), CancellationToken.None);
+            return _finalEventRaised.Task;
         }
     }
 }

@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using AppDomainToolkit;
 using Isolated.TestFramework.Events;
 using Isolated.TestFramework.Remoting;
-using Isolated.TestFramework.Scopes;
 using Xunit;
 using Xunit.Sdk;
 using IDisposable = System.IDisposable;
@@ -16,14 +15,12 @@ namespace Isolated.TestFramework
 {
     internal class Isolated : LongLivedMarshalByRefObject, IDisposable
     {
-        private readonly IsolationScope _scope;
         private readonly AppDomainEventListener _appDomainEventListener;
         private readonly AppDomainContext<AssemblyTargetLoader, PathBasedAssemblyResolver> _appDomainContext;
         private CancellationTokenRegistration _cancellationRegistration;
 
-        public Isolated(IsolationScope scope, AppDomainEventListener appDomainEventListener)
+        public Isolated(AppDomainEventListener appDomainEventListener)
         {
-            _scope = scope;
             _appDomainEventListener = appDomainEventListener;
 
             OnAppDomainLoading();
@@ -54,40 +51,32 @@ namespace Isolated.TestFramework
             var methodInfo = ((MethodCallExpression)runAsyncExpression.Body).Method;
 
             var remoteTaskCompletionSource = new RemoteTaskCompletionSource<SerializableRunSummary>();
-            try
-            {
-                RemoteAction.Invoke(
-                    _appDomainContext.Domain,
-                    CallerAppDomainId,
-                    runnerArgs,
-                    remoteTaskCompletionSource,
-                    methodInfo,
-                    async (callerAppDomainId, args, taskCompletionSource, runAsyncMethod) =>
+            RemoteAction.Invoke(
+                _appDomainContext.Domain,
+                CallerAppDomainId,
+                runnerArgs,
+                remoteTaskCompletionSource,
+                methodInfo,
+                async (callerAppDomainId, args, taskCompletionSource, runAsyncMethod) =>
+                {
+                    try
                     {
-                        try
-                        {
-                            if (callerAppDomainId == AppDomain.CurrentDomain.Id)
-                                throw new InvalidOperationException("The action is running in the default app domain instead of being run in the foreign app domain.");
+                        if (callerAppDomainId == AppDomain.CurrentDomain.Id)
+                            throw new InvalidOperationException("The action is running in the default app domain instead of being run in the foreign app domain.");
 
-                            var runner = ObjectFactory.CreateInstance<TRunner>(args);
-                            var runSummary = await (Task<RunSummary>) runAsyncMethod.Invoke(runner, null);
-                            taskCompletionSource.SetResult(new SerializableRunSummary(runSummary));
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            taskCompletionSource.SetCanceled();
-                        }
-                        catch (Exception e)
-                        {
-                            taskCompletionSource.SetException(e);
-                        }
-                    });
-            }
-            catch (Exception)
-            {
-                _scope.Abort();
-                throw;
-            }
+                        var runner = ObjectFactory.CreateInstance<TRunner>(args);
+                        var runSummary = await (Task<RunSummary>) runAsyncMethod.Invoke(runner, null);
+                        taskCompletionSource.SetResult(new SerializableRunSummary(runSummary));
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        taskCompletionSource.SetCanceled();
+                    }
+                    catch (Exception e)
+                    {
+                        taskCompletionSource.SetException(e);
+                    }
+                });
             var serializableRunSummary = await remoteTaskCompletionSource.Task;
             return serializableRunSummary.AsRunSummary();
         }
@@ -96,7 +85,6 @@ namespace Isolated.TestFramework
         {
             OnAppDomainUnloading();
             _cancellationRegistration.Dispose();
-            _scope.Dispose();
             _appDomainContext.Dispose();
             OnAppDomainUnloaded();
         }
