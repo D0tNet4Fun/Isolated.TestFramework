@@ -8,12 +8,13 @@ using AppDomainToolkit;
 using Isolated.TestFramework.Events;
 using Isolated.TestFramework.Remoting;
 using Isolated.TestFramework.Scopes;
+using Xunit;
 using Xunit.Sdk;
 using IDisposable = System.IDisposable;
 
 namespace Isolated.TestFramework
 {
-    internal class Isolated : MarshalByRefObject, IDisposable
+    internal class Isolated : LongLivedMarshalByRefObject, IDisposable
     {
         private readonly IsolationScope _scope;
         private readonly AppDomainEventListener _appDomainEventListener;

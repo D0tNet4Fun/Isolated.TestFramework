@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Xunit;
 
 namespace Isolated.TestFramework.Remoting
 {
-    public class RemoteTaskCompletionSource<T> : MarshalByRefObject
+    public class RemoteTaskCompletionSource<T> : LongLivedMarshalByRefObject
     {
         private readonly TaskCompletionSource<T> _taskCompletionSource = new TaskCompletionSource<T>();
 

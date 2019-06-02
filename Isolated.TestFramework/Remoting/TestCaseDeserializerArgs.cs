@@ -4,7 +4,8 @@ using Xunit.Abstractions;
 
 namespace Isolated.TestFramework.Remoting
 {
-    internal class TestCaseDeserializerArgs : MarshalByRefObject
+    [Serializable]
+    internal class TestCaseDeserializerArgs
     {
         public AssemblyName AssemblyName { get; set; }
         public ISourceInformationProvider SourceInformationProvider { get; set; }

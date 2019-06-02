@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Threading;
+using Xunit;
 
 namespace Isolated.TestFramework.Remoting
 {
-    internal class RemoteCancellationTokenSource : MarshalByRefObject, IDisposable
+    internal class RemoteCancellationTokenSource : LongLivedMarshalByRefObject, IDisposable
     {
         public CancellationTokenSource CancellationTokenSource { get; } = new CancellationTokenSource();
 
