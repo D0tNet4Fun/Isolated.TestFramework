@@ -1,14 +1,15 @@
-﻿using System;
+﻿using System.Threading.Tasks;
 using Xunit.Abstractions;
 
 namespace Isolated.TestFramework.Scopes
 {
-    internal class TestCollectionScope : IsolationScope, IDisposable
+    internal class TestCollectionScope : IsolationScope
     {
         private readonly ITestCollection _testCollection;
         private readonly IMessageSinkWithEvents _messageSinkWithEvents;
 
-        public TestCollectionScope(ITestCollection testCollection, IMessageSinkWithEvents messageSinkWithEvents)
+        public TestCollectionScope(ITestCollection testCollection, IMessageSinkWithEvents messageSinkWithEvents, Isolated isolated, TaskFactory dispositionTaskFactory, IMessageSink diagnosticMessageSink)
+            : base(isolated, dispositionTaskFactory, diagnosticMessageSink)
         {
             _testCollection = testCollection;
             _messageSinkWithEvents = messageSinkWithEvents;
@@ -20,9 +21,13 @@ namespace Isolated.TestFramework.Scopes
             if (_testCollection == e) SetFinalEvent();
         }
 
-        public void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            _messageSinkWithEvents.TestCollectionFinished -= MessageSinkWithEventsOnTestCollectionFinished;
+            if (disposing)
+            {
+                _messageSinkWithEvents.TestCollectionFinished -= MessageSinkWithEventsOnTestCollectionFinished;
+            }
+            base.Dispose(disposing);
         }
     }
 }

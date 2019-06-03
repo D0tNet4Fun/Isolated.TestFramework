@@ -62,6 +62,7 @@
     <Compile Include="Events\AppDomainEventListener.cs" />
     <Compile Include="IMessageSinkWithEvents.cs" />
     <Compile Include="IsolationBehaviorAttribute.cs" />
+    <Compile Include="IsolatedDispositionTaskScheduler.cs" />
     <Compile Include="IsolationLevel.cs" />
     <Compile Include="MessageSinkWithEvents.cs" />
     <Compile Include="ObjectFactory.cs" />

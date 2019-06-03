@@ -94,7 +94,11 @@ namespace Isolated.TestFramework.Runners
                 return new RunSummary();
             }
 
-            return await new TestCollectionRunner(testCollection, testCases.ToList(), DiagnosticMessageSink, messageBus, TestCaseOrderer, new ExceptionAggregator(Aggregator), cancellationTokenSource, _messageSyncWithEvents, _testCaseDeserializerArgs, _isolationBehavior, _appDomainEventListener).RunAsync();
+            using (var taskScheduler = new IsolatedDispositionTaskScheduler())
+            {
+                var dispositionTaskFactory = new TaskFactory(taskScheduler);
+                return await new TestCollectionRunner(testCollection, testCases.ToList(), DiagnosticMessageSink, messageBus, TestCaseOrderer, new ExceptionAggregator(Aggregator), cancellationTokenSource, _messageSyncWithEvents, _testCaseDeserializerArgs, _isolationBehavior, _appDomainEventListener, dispositionTaskFactory).RunAsync();
+            }
         }
     }
 }
