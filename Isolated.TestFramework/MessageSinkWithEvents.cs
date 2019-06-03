@@ -20,7 +20,7 @@ namespace Isolated.TestFramework
             var result = _innerMessageSink.OnMessage(message);
             try
             {
-                OnMessageHandled((dynamic) message);
+                OnMessageHandled(message);
             }
             catch (Exception e)
             {
@@ -30,12 +30,12 @@ namespace Isolated.TestFramework
             return result;
         }
 
-        private void OnMessageHandled(ITestCollectionFinished message) => TestCollectionFinished?.Invoke(this, message.TestCollection);
-
-        // ReSharper disable once UnusedParameter.Local - used by DLR
-        // ReSharper disable once MemberCanBeMadeStatic.Local
         private void OnMessageHandled(IMessageSinkMessage message)
         {
+            if (message is ITestCollectionFinished testCollectionFinished)
+            {
+                TestCollectionFinished?.Invoke(this, testCollectionFinished.TestCollection);
+            }
         }
 
         public event EventHandler<ITestCollection> TestCollectionFinished;
