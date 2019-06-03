@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/01/nuspec.xsd">
+  <metadata minClientVersion="2.12">
+    <id>Isolated.TestFramework</id>
+    <version>1.0.0-rc2</version>
+    <title>Isolated.TestFramework</title>
+    <authors>DotNet4Fun</authors>
+    <owners>DotNet4Fun</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/D0tNet4Fun/Isolated.TestFramework</projectUrl>
+    <description>Xunit-based test framework for running unit tests in isolation using multiple app domains per test assembly.</description>
+    <copyright>Copyright (c) 2019</copyright>
+    <tags>xunit appdomain isolation</tags>
+    <dependencies>
+      <group targetFramework=".NETFramework4.5.2">
+        <dependency id="AppDomainToolkit" version="1.0.4.3" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="Isolated.TestFramework\bin\$Configuration$\Isolated.TestFramework.dll" target="lib\net452" />
+    <file src="Isolated.TestFramework\bin\$Configuration$\Isolated.TestFramework.pdb" target="lib\net452" />
+  </files>
+</package>
