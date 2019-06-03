@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using AppDomainToolkit;
@@ -46,18 +46,16 @@ namespace Isolated.TestFramework
             return remoteCancellationTokenSource;
         }
 
-        public async Task<RunSummary> CreateInstanceAndRunAsync<TRunner>(object[] runnerArgs, Expression<Func<TRunner, Task<RunSummary>>> runAsyncExpression)
+        public async Task<RunSummary> CreateInstanceAndRunAsync<TRunner>(object[] runnerArgs, MethodInfo runAsyncMethod)
         {
-            var methodInfo = ((MethodCallExpression)runAsyncExpression.Body).Method;
-
             var remoteTaskCompletionSource = new RemoteTaskCompletionSource<SerializableRunSummary>();
             RemoteAction.Invoke(
                 _appDomainContext.Domain,
                 CallerAppDomainId,
                 runnerArgs,
                 remoteTaskCompletionSource,
-                methodInfo,
-                async (callerAppDomainId, args, taskCompletionSource, runAsyncMethod) =>
+                runAsyncMethod,
+                async (callerAppDomainId, args, taskCompletionSource, methodInfo) =>
                 {
                     try
                     {
@@ -65,7 +63,7 @@ namespace Isolated.TestFramework
                             throw new InvalidOperationException("The action is running in the default app domain instead of being run in the foreign app domain.");
 
                         var runner = ObjectFactory.CreateInstance<TRunner>(args);
-                        var runSummary = await (Task<RunSummary>) runAsyncMethod.Invoke(runner, null);
+                        var runSummary = await (Task<RunSummary>) methodInfo.Invoke(runner, null);
                         taskCompletionSource.SetResult(new SerializableRunSummary(runSummary));
                     }
                     catch (OperationCanceledException)

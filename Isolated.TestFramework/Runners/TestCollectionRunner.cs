@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Isolated.TestFramework.Behaviors;
@@ -54,7 +54,7 @@ namespace Isolated.TestFramework.Runners
                 var remoteTestCases = isolated.CreateRemoteTestCases(TestCases, _testCaseDeserializerArgs);
                 var remoteCancellationTokenSource = isolated.CreateRemoteCancellationTokenSource(CancellationTokenSource);
                 var runnerArgs = new object[] {TestCollection, remoteTestCases, DiagnosticMessageSink, MessageBus, TestCaseOrderer.GetType(), remoteCancellationTokenSource};
-                var runSummary = await isolated.CreateInstanceAndRunAsync<RemoteTestCollectionRunner>(runnerArgs, x => x.RunAsync());
+                var runSummary = await isolated.CreateInstanceAndRunAsync<RemoteTestCollectionRunner>(runnerArgs, RemoteTestCollectionRunner.MethodRunAsync);
 
                 // wait for the scope before disposing the isolated instance, but only if we made it this far
                 await scope.WaitAsync(CancellationTokenSource.Token);
@@ -75,6 +75,8 @@ namespace Isolated.TestFramework.Runners
         // ReSharper disable once ClassNeverInstantiated.Local
         private class RemoteTestCollectionRunner : XunitTestCollectionRunner
         {
+            public static readonly MethodInfo MethodRunAsync = typeof(RemoteTestCollectionRunner).GetMethod(nameof(RunAsync));
+
             private readonly RemoteCancellationTokenSource _remoteCancellationTokenSource;
 
             public RemoteTestCollectionRunner(ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageBus messageBus, Type testCaseOrdererType, RemoteCancellationTokenSource remoteCancellationTokenSource)
