@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 using AppDomainToolkit;
 using Isolated.TestFramework.Remoting;
 using Isolated.TestFramework.Runners;
@@ -45,7 +44,7 @@ namespace Isolated.TestFramework
                 });
         }
 
-        public RemoteCancellationTokenSource CreateRemoteCancellationTokenSource(CancellationTokenSource cancellationTokenSource)
+        public RemoteCancellationTokenSource CreateRemoteCancellationTokenSource()
         {
             return RemoteFunc.Invoke(_appDomain, () => new RemoteCancellationTokenSource());
         }

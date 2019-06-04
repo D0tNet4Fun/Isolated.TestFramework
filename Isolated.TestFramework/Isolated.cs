@@ -41,7 +41,7 @@ namespace Isolated.TestFramework
         public RemoteCancellationTokenSource CreateRemoteCancellationTokenSource(CancellationTokenSource cancellationTokenSource)
         {
             var remoteObjectFactory = new RemoteObjectFactory(_appDomainContext.Domain, null);
-            var remoteCancellationTokenSource = remoteObjectFactory.CreateRemoteCancellationTokenSource(cancellationTokenSource);
+            var remoteCancellationTokenSource = remoteObjectFactory.CreateRemoteCancellationTokenSource();
             _cancellationRegistration = cancellationTokenSource.Token.Register(remoteCancellationTokenSource.Cancel);
             return remoteCancellationTokenSource;
         }
