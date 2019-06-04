@@ -76,7 +76,7 @@ namespace Isolated.TestFramework
                     }
                 });
             var serializableRunSummary = await remoteTaskCompletionSource.Task;
-            return serializableRunSummary.AsRunSummary();
+            return serializableRunSummary.Deserialize();
         }
 
         public void Dispose()
