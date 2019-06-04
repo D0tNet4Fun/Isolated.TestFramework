@@ -4,7 +4,7 @@ using Xunit.Sdk;
 namespace Isolated.TestFramework.Remoting
 {
     [Serializable]
-    public class SerializableRunSummary
+    internal class SerializableRunSummary
     {
         public SerializableRunSummary(RunSummary runSummary)
         {

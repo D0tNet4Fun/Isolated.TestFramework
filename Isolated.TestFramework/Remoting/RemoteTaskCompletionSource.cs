@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Isolated.TestFramework.Remoting
 {
-    public class RemoteTaskCompletionSource<T> : LongLivedMarshalByRefObject
+    internal class RemoteTaskCompletionSource<T> : LongLivedMarshalByRefObject
     {
         private readonly TaskCompletionSource<T> _taskCompletionSource = new TaskCompletionSource<T>();
 

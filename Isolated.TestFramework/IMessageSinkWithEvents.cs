@@ -3,7 +3,7 @@ using Xunit.Abstractions;
 
 namespace Isolated.TestFramework
 {
-    public interface IMessageSinkWithEvents : IMessageSink
+    internal interface IMessageSinkWithEvents : IMessageSink
     {
         event EventHandler<ITestCollection> TestCollectionFinished;
     }

@@ -4,7 +4,7 @@ using Xunit.Sdk;
 
 namespace Isolated.TestFramework
 {
-    public class MessageSinkWithEvents : IMessageSinkWithEvents
+    internal class MessageSinkWithEvents : IMessageSinkWithEvents
     {
         private readonly IMessageSink _innerMessageSink;
         private readonly IMessageSink _diagnosticMessageSink;
