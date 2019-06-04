@@ -19,6 +19,8 @@ namespace Isolated.TestFramework.Runners
         private Exception _configurationException;
         private IIsolationBehavior _isolationBehavior;
         private AppDomainEventListener _appDomainEventListener;
+        private IsolatedDispositionTaskScheduler _taskScheduler;
+        private TaskFactory _dispositionTaskFactory;
 
         public TestAssemblyRunner(ITestAssembly testAssembly, IEnumerable<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageSink executionMessageSink, ITestFrameworkExecutionOptions executionOptions, TestCaseDeserializerArgs testCaseDeserializerArgs)
             : base(testAssembly, testCases, diagnosticMessageSink, executionMessageSink, executionOptions)
@@ -40,6 +42,7 @@ namespace Isolated.TestFramework.Runners
             {
                 ConfigureIsolationBehavior();
                 ConfigureAppDomainEventListener();
+                InitializeAsyncDisposition();
             }
             catch (TargetInvocationException e)
             {
@@ -85,7 +88,13 @@ namespace Isolated.TestFramework.Runners
             _appDomainEventListener = (AppDomainEventListener)ObjectFactory.CreateInstance(type, null);
         }
 
-        protected override async Task<RunSummary> RunTestCollectionAsync(IMessageBus messageBus, ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, CancellationTokenSource cancellationTokenSource)
+        private void InitializeAsyncDisposition()
+        {
+            _taskScheduler = new IsolatedDispositionTaskScheduler();
+            _dispositionTaskFactory = new TaskFactory(_taskScheduler);
+        }
+
+        protected override async Task<RunSummary> RunTestCollectionsAsync(IMessageBus messageBus, CancellationTokenSource cancellationTokenSource)
         {
             if (_configurationException != null)
             {
@@ -93,12 +102,19 @@ namespace Isolated.TestFramework.Runners
                 messageBus.QueueMessage(new ErrorMessage(new IXunitTestCase[0], _configurationException));
                 return new RunSummary();
             }
+            var runSummary = await base.RunTestCollectionsAsync(messageBus, cancellationTokenSource);
+            return runSummary;
+        }
 
-            using (var taskScheduler = new IsolatedDispositionTaskScheduler())
-            {
-                var dispositionTaskFactory = new TaskFactory(taskScheduler);
-                return await new TestCollectionRunner(testCollection, testCases.ToList(), DiagnosticMessageSink, messageBus, TestCaseOrderer, new ExceptionAggregator(Aggregator), cancellationTokenSource, _messageSyncWithEvents, _testCaseDeserializerArgs, _isolationBehavior, _appDomainEventListener, dispositionTaskFactory).RunAsync();
-            }
+        protected override Task<RunSummary> RunTestCollectionAsync(IMessageBus messageBus, ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, CancellationTokenSource cancellationTokenSource)
+        {
+            return new TestCollectionRunner(testCollection, testCases.ToList(), DiagnosticMessageSink, messageBus, TestCaseOrderer, new ExceptionAggregator(Aggregator), cancellationTokenSource, _messageSyncWithEvents, _testCaseDeserializerArgs, _isolationBehavior, _appDomainEventListener, _dispositionTaskFactory).RunAsync();
+        }
+
+        protected override async Task BeforeTestAssemblyFinishedAsync()
+        {
+            await base.BeforeTestAssemblyFinishedAsync();
+            _taskScheduler?.Dispose();
         }
     }
 }
