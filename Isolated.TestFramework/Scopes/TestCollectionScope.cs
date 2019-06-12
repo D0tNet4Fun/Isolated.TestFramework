@@ -8,8 +8,8 @@ namespace Isolated.TestFramework.Scopes
         private readonly ITestCollection _testCollection;
         private readonly IMessageSinkWithEvents _messageSinkWithEvents;
 
-        public TestCollectionScope(ITestCollection testCollection, IMessageSinkWithEvents messageSinkWithEvents, Isolated isolated, TaskFactory dispositionTaskFactory, IMessageSink diagnosticMessageSink)
-            : base(isolated, dispositionTaskFactory, diagnosticMessageSink)
+        public TestCollectionScope(ITestCollection testCollection, IMessageSinkWithEvents messageSinkWithEvents, IsolatedContext isolatedContext, TaskFactory dispositionTaskFactory, IMessageSink diagnosticMessageSink)
+            : base(isolatedContext, dispositionTaskFactory, diagnosticMessageSink)
         {
             _testCollection = testCollection;
             _messageSinkWithEvents = messageSinkWithEvents;

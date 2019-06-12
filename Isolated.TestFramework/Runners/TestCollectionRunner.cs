@@ -4,7 +4,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Isolated.TestFramework.Behaviors;
-using Isolated.TestFramework.Events;
 using Isolated.TestFramework.Remoting;
 using Isolated.TestFramework.Scopes;
 using Xunit.Abstractions;
@@ -16,15 +15,15 @@ namespace Isolated.TestFramework.Runners
     {
         private readonly IMessageSinkWithEvents _meeMessageSinkWithEvents;
         private readonly TestCaseDeserializerArgs _testCaseDeserializerArgs;
-        private readonly AppDomainEventListener _appDomainEventListener;
+        private readonly Type[] _appDomainFixtureTypes;
         private readonly TaskFactory _dispositionTaskFactory;
 
-        public TestCollectionRunner(ITestCollection testCollection, IReadOnlyList<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageBus messageBus, ITestCaseOrderer testCaseOrderer, ExceptionAggregator aggregator, CancellationTokenSource cancellationTokenSource, IMessageSinkWithEvents meeMessageSinkWithEvents, TestCaseDeserializerArgs testCaseDeserializerArgs, IIsolationBehavior isolationBehavior, AppDomainEventListener appDomainEventListener, TaskFactory dispositionTaskFactory)
+        public TestCollectionRunner(ITestCollection testCollection, IReadOnlyList<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageBus messageBus, ITestCaseOrderer testCaseOrderer, ExceptionAggregator aggregator, CancellationTokenSource cancellationTokenSource, IMessageSinkWithEvents meeMessageSinkWithEvents, TestCaseDeserializerArgs testCaseDeserializerArgs, IIsolationBehavior isolationBehavior, Type[] appDomainFixtureTypes, TaskFactory dispositionTaskFactory)
             : base(testCollection, testCases, diagnosticMessageSink, messageBus, testCaseOrderer, aggregator, cancellationTokenSource)
         {
             _meeMessageSinkWithEvents = meeMessageSinkWithEvents;
             _testCaseDeserializerArgs = testCaseDeserializerArgs;
-            _appDomainEventListener = appDomainEventListener;
+            _appDomainFixtureTypes = appDomainFixtureTypes;
             _dispositionTaskFactory = dispositionTaskFactory;
 
             RunIsolated = isolationBehavior?.IsolateTestCollection(testCollection, testCases) ?? false;
@@ -50,25 +49,25 @@ namespace Isolated.TestFramework.Runners
 
         private async Task<RunSummary> RunIsolatedAsync()
         {
-            Isolated isolated = null;
+            IsolatedContext isolatedContext = null;
             TestCollectionScope scope;
             try
             {
-                isolated = new Isolated(_appDomainEventListener);
-                scope = new TestCollectionScope(TestCollection, _meeMessageSinkWithEvents, isolated, _dispositionTaskFactory, DiagnosticMessageSink); // owns the isolated instance
+                isolatedContext = new IsolatedContext(_appDomainFixtureTypes, Aggregator);
+                scope = new TestCollectionScope(TestCollection, _meeMessageSinkWithEvents, isolatedContext, _dispositionTaskFactory, DiagnosticMessageSink); // owns the isolated instance
             }
             catch(Exception)
             {
-                isolated?.Dispose();
+                isolatedContext?.Dispose();
                 throw;
             }
             
             try
             {
-                var remoteTestCases = isolated.CreateRemoteTestCases(TestCases, _testCaseDeserializerArgs);
-                var remoteCancellationTokenSource = isolated.CreateRemoteCancellationTokenSource(CancellationTokenSource);
+                var remoteTestCases = isolatedContext.CreateRemoteTestCases(TestCases, _testCaseDeserializerArgs);
+                var remoteCancellationTokenSource = isolatedContext.CreateRemoteCancellationTokenSource(CancellationTokenSource);
                 var runnerArgs = new object[] {TestCollection, remoteTestCases, DiagnosticMessageSink, MessageBus, TestCaseOrderer.GetType(), remoteCancellationTokenSource, Aggregator.ToException()};
-                var runSummary = await isolated.CreateInstanceAndRunAsync<RemoteTestCollectionRunner>(runnerArgs, RemoteTestCollectionRunner.MethodRunAsync);
+                var runSummary = await isolatedContext.CreateRemoteInstanceAndRunAsync<RemoteTestCollectionRunner>(runnerArgs, RemoteTestCollectionRunner.MethodRunAsync);
 
                 // now that the run summary is available schedule the disposition of the scope as soon as it is completed
                 scope.DisposeOnCompletionAsync(CancellationTokenSource.Token);

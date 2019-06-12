@@ -55,11 +55,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AppDomainEventListenerAttribute.cs" />
     <Compile Include="Behaviors\IsolateByCustomAttributeBehavior.cs" />
     <Compile Include="Behaviors\IsolateTestCollectionBehavior.cs" />
     <Compile Include="Behaviors\IIsolationBehavior.cs" />
-    <Compile Include="Events\AppDomainEventListener.cs" />
+    <Compile Include="Fixtures\AppDomainFixtureContainer.cs" />
     <Compile Include="IMessageSinkWithEvents.cs" />
     <Compile Include="IsolationBehaviorAttribute.cs" />
     <Compile Include="IsolatedDispositionTaskScheduler.cs" />
@@ -68,7 +67,8 @@
     <Compile Include="ObjectFactory.cs" />
     <Compile Include="Remoting\RemoteCancellationTokenSource.cs" />
     <Compile Include="Remoting\TestCaseDeserializerArgs.cs" />
-    <Compile Include="Isolated.cs" />
+    <Compile Include="IsolatedContext.cs" />
+    <Compile Include="IsolatedFixtureAttribute.cs" />
     <Compile Include="IsolatedTestFramework.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteObjectFactory.cs" />

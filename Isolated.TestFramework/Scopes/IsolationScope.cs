@@ -8,14 +8,14 @@ namespace Isolated.TestFramework.Scopes
 {
     internal class IsolationScope : IDisposable
     {
-        private readonly Isolated _isolated;
+        private readonly IsolatedContext _isolatedContext;
         private readonly TaskFactory _dispositionTaskFactory;
         private readonly IMessageSink _diagnosticMessageSink;
         private readonly ManualResetEventSlim _finalEventRaised = new ManualResetEventSlim(false);
 
-        protected IsolationScope(Isolated isolated, TaskFactory dispositionTaskFactory, IMessageSink diagnosticMessageSink)
+        protected IsolationScope(IsolatedContext isolatedContext, TaskFactory dispositionTaskFactory, IMessageSink diagnosticMessageSink)
         {
-            _isolated = isolated;
+            _isolatedContext = isolatedContext;
             _dispositionTaskFactory = dispositionTaskFactory;
             _diagnosticMessageSink = diagnosticMessageSink;
         }
@@ -38,7 +38,7 @@ namespace Isolated.TestFramework.Scopes
             if (disposing)
             {
                 _finalEventRaised?.Dispose();
-                _isolated?.Dispose();
+                _isolatedContext?.Dispose();
             }
         }
 
