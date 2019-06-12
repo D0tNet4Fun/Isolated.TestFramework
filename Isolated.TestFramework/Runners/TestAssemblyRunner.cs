@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Isolated.TestFramework.Behaviors;
@@ -16,7 +15,6 @@ namespace Isolated.TestFramework.Runners
     {
         private readonly TestCaseDeserializerArgs _testCaseDeserializerArgs;
         private readonly IMessageSinkWithEvents _messageSyncWithEvents;
-        private Exception _configurationException;
         private IIsolationBehavior _isolationBehavior;
         private AppDomainEventListener _appDomainEventListener;
         private IsolatedDispositionTaskScheduler _taskScheduler;
@@ -38,20 +36,12 @@ namespace Isolated.TestFramework.Runners
 
         protected override async Task AfterTestAssemblyStartingAsync()
         {
-            try
+            Aggregator.Run(() =>
             {
                 ConfigureIsolationBehavior();
                 ConfigureAppDomainEventListener();
                 InitializeAsyncDisposition();
-            }
-            catch (TargetInvocationException e)
-            {
-                _configurationException = e.InnerException;
-            }
-            catch (Exception e)
-            {
-                _configurationException = e;
-            }
+            });
 
             await base.AfterTestAssemblyStartingAsync();
         }
@@ -74,8 +64,7 @@ namespace Isolated.TestFramework.Runners
                     _isolationBehavior = new IsolateTestCollectionBehavior();
                     break;
                 default:
-                    DiagnosticMessageSink.OnMessage(new DiagnosticMessage($"Unknown isolation level: {isolationLevel}"));
-                    break;
+                    throw new InvalidOperationException($"Unknown isolation level: {isolationLevel}");
             }
         }
 
@@ -90,20 +79,11 @@ namespace Isolated.TestFramework.Runners
 
         private void InitializeAsyncDisposition()
         {
-            _taskScheduler = new IsolatedDispositionTaskScheduler();
-            _dispositionTaskFactory = new TaskFactory(_taskScheduler);
-        }
-
-        protected override async Task<RunSummary> RunTestCollectionsAsync(IMessageBus messageBus, CancellationTokenSource cancellationTokenSource)
-        {
-            if (_configurationException != null)
+            if (_isolationBehavior != null)
             {
-                DiagnosticMessageSink.OnMessage(new DiagnosticMessage($"An error occurred while configuring the isolation behavior: {_configurationException}"));
-                messageBus.QueueMessage(new ErrorMessage(new IXunitTestCase[0], _configurationException));
-                return new RunSummary();
+                _taskScheduler = new IsolatedDispositionTaskScheduler();
+                _dispositionTaskFactory = new TaskFactory(_taskScheduler);
             }
-            var runSummary = await base.RunTestCollectionsAsync(messageBus, cancellationTokenSource);
-            return runSummary;
         }
 
         protected override Task<RunSummary> RunTestCollectionAsync(IMessageBus messageBus, ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, CancellationTokenSource cancellationTokenSource)
@@ -114,7 +94,15 @@ namespace Isolated.TestFramework.Runners
         protected override async Task BeforeTestAssemblyFinishedAsync()
         {
             await base.BeforeTestAssemblyFinishedAsync();
-            _taskScheduler?.Dispose();
+            DisposeTaskScheduler();
+        }
+
+        private void DisposeTaskScheduler()
+        {
+            if (_taskScheduler != null)
+            {
+                Aggregator.Run(() => _taskScheduler.Dispose());
+            }
         }
     }
 }

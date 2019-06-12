@@ -67,7 +67,7 @@ namespace Isolated.TestFramework.Runners
             {
                 var remoteTestCases = isolated.CreateRemoteTestCases(TestCases, _testCaseDeserializerArgs);
                 var remoteCancellationTokenSource = isolated.CreateRemoteCancellationTokenSource(CancellationTokenSource);
-                var runnerArgs = new object[] {TestCollection, remoteTestCases, DiagnosticMessageSink, MessageBus, TestCaseOrderer.GetType(), remoteCancellationTokenSource};
+                var runnerArgs = new object[] {TestCollection, remoteTestCases, DiagnosticMessageSink, MessageBus, TestCaseOrderer.GetType(), remoteCancellationTokenSource, Aggregator.ToException()};
                 var runSummary = await isolated.CreateInstanceAndRunAsync<RemoteTestCollectionRunner>(runnerArgs, RemoteTestCollectionRunner.MethodRunAsync);
 
                 // now that the run summary is available schedule the disposition of the scope as soon as it is completed
@@ -98,12 +98,12 @@ namespace Isolated.TestFramework.Runners
 
             private readonly RemoteCancellationTokenSource _remoteCancellationTokenSource;
 
-            public RemoteTestCollectionRunner(ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageBus messageBus, Type testCaseOrdererType, RemoteCancellationTokenSource remoteCancellationTokenSource)
+            public RemoteTestCollectionRunner(ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageBus messageBus, Type testCaseOrdererType, RemoteCancellationTokenSource remoteCancellationTokenSource, Exception aggregatorException)
                 : base(testCollection, testCases, diagnosticMessageSink, messageBus, null, null, null)
             {
                 _remoteCancellationTokenSource = remoteCancellationTokenSource;
                 TestCaseOrderer = ObjectFactory.CreateTestCaseOrderer(testCaseOrdererType, diagnosticMessageSink);
-                Aggregator = new ExceptionAggregator();
+                Aggregator = ObjectFactory.CreateExceptionAggregator(aggregatorException);
                 CancellationTokenSource = remoteCancellationTokenSource.CancellationTokenSource;
             }
 

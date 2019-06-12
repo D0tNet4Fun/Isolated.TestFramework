@@ -6,7 +6,7 @@ namespace Isolated.TestFramework
 {
     internal static class ObjectFactory
     {
-        public static T CreateInstance<T>(object[] args) => (T) CreateInstance(typeof(T), args);
+        public static T CreateInstance<T>(object[] args) => (T)CreateInstance(typeof(T), args);
 
         public static object CreateInstance(Type type, object[] args) => Activator.CreateInstance(type, args);
 
@@ -15,13 +15,31 @@ namespace Isolated.TestFramework
             object instance;
             try
             {
-                instance = CreateInstance(type, new object[] {diagnosticMessageSink});
+                instance = CreateInstance(type, new object[] { diagnosticMessageSink });
             }
             catch (MissingMethodException)
             {
                 instance = CreateInstance(type, null);
             }
             return (ITestCaseOrderer)instance;
+        }
+
+        public static ExceptionAggregator CreateExceptionAggregator(Exception exception)
+        {
+            var aggregator = new ExceptionAggregator();
+            if (exception != null)
+            {
+                if (exception is AggregateException aggregateException)
+                {
+                    foreach (var innerException in aggregateException.InnerExceptions)
+                    {
+                        aggregator.Add(innerException);
+                    }
+                }
+                else
+                    aggregator.Add(exception);
+            }
+            return aggregator;
         }
     }
 }
