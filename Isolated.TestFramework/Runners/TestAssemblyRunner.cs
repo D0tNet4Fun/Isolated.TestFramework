@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Isolated.TestFramework.Behaviors;
+using Isolated.TestFramework.Fixtures;
 using Isolated.TestFramework.Remoting;
 using Xunit.Abstractions;
 using Xunit.Sdk;
@@ -19,6 +20,7 @@ namespace Isolated.TestFramework.Runners
         private IsolatedDispositionTaskScheduler _taskScheduler;
         private TaskFactory _dispositionTaskFactory;
         private Type[] _appDomainFixtureTypes;
+        private AppDomainFixtureContainer _fixtureContainer;
 
         public TestAssemblyRunner(ITestAssembly testAssembly, IEnumerable<IXunitTestCase> testCases, IMessageSink diagnosticMessageSink, IMessageSink executionMessageSink, ITestFrameworkExecutionOptions executionOptions, TestCaseDeserializerArgs testCaseDeserializerArgs)
             : base(testAssembly, testCases, diagnosticMessageSink, executionMessageSink, executionOptions)
@@ -44,6 +46,7 @@ namespace Isolated.TestFramework.Runners
             });
 
             await base.AfterTestAssemblyStartingAsync();
+            InitializeAppDomainFixtureContainer();
         }
 
         private void ConfigureIsolationBehavior()
@@ -96,6 +99,12 @@ namespace Isolated.TestFramework.Runners
             }
         }
 
+        private void InitializeAppDomainFixtureContainer()
+        {
+            _fixtureContainer = new AppDomainFixtureContainer(_appDomainFixtureTypes, Aggregator);
+            _fixtureContainer.CreateFixtures();
+        }
+
         protected override Task<RunSummary> RunTestCollectionAsync(IMessageBus messageBus, ITestCollection testCollection, IEnumerable<IXunitTestCase> testCases, CancellationTokenSource cancellationTokenSource)
         {
             return new TestCollectionRunner(testCollection, testCases.ToList(), DiagnosticMessageSink, messageBus, TestCaseOrderer, new ExceptionAggregator(Aggregator), cancellationTokenSource, _messageSyncWithEvents, _testCaseDeserializerArgs, _isolationBehavior, _appDomainFixtureTypes, _dispositionTaskFactory).RunAsync();
@@ -105,6 +114,7 @@ namespace Isolated.TestFramework.Runners
         {
             await base.BeforeTestAssemblyFinishedAsync();
             DisposeTaskScheduler();
+            DisposeFixtureContainer();
         }
 
         private void DisposeTaskScheduler()
@@ -113,6 +123,11 @@ namespace Isolated.TestFramework.Runners
             {
                 Aggregator.Run(() => _taskScheduler.Dispose());
             }
+        }
+
+        private void DisposeFixtureContainer()
+        {
+            Aggregator.Run(() => _fixtureContainer?.Dispose());
         }
     }
 }
