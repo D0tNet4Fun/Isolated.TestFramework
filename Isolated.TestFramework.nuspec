@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/01/nuspec.xsd">
   <metadata minClientVersion="2.12">
     <id>Isolated.TestFramework</id>
-    <version>1.0.0-rc2</version>
+    <version>1.0.0-rc3</version>
     <title>Isolated.TestFramework</title>
     <authors>DotNet4Fun</authors>
     <owners>DotNet4Fun</owners>
